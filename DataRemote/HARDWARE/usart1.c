@@ -7,10 +7,10 @@
 
 
 //串口发送缓存区 	
-__align(8) u8 USART1_TX_BUF[USART1_MAX_SEND_LEN]; 	      //发送缓冲,最大USART1_MAX_SEND_LEN字节
+__align(8) u8 USART1_TX_BUF[USART1_MAX_SEND_LEN]={0}; 	      //发送缓冲,最大USART1_MAX_SEND_LEN字节
 #ifdef USART1_RX_EN   								      //如果使能了接收   	  
 //串口接收缓存区 	
-u8 USART1_RX_BUF[USART1_MAX_RECV_LEN]; 				      //接收缓冲,最大USART1_MAX_RECV_LEN个字节.
+u8 USART1_RX_BUF[USART1_MAX_RECV_LEN]={0}; 				      //接收缓冲,最大USART1_MAX_RECV_LEN个字节.
 
 UART_HandleTypeDef UART1_Handler;                         //UART句柄
 static const u8 HeadId[2] = {'\x5a','\x5b'};

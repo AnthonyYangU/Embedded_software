@@ -406,10 +406,10 @@ ARM Macro Assembler    Page 7
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M0+ --apcs=inter
 work --depend=..\obj\startup_stm32l071xx.d -o..\obj\startup_stm32l071xx.o -IF:\
-connection\071test\USER\RTE -IE:\Keil_v5\ARM\PACK\Keil\STM32L0xx_DFP\2.0.1\Driv
-ers\CMSIS\Device\ST\STM32L0xx\Include -IE:\Keil_v5\ARM\CMSIS\Include --predefin
-e="__UVISION_VERSION SETA 518" --predefine="STM32L071xx SETA 1" --list=.\listin
-gs\startup_stm32l071xx.lst ..\CORE\startup_stm32l071xx.s
+Embedded_Software\DataRemote\USER\RTE -IE:\Keil_v5\ARM\PACK\Keil\STM32L0xx_DFP\
+2.0.1\Drivers\CMSIS\Device\ST\STM32L0xx\Include -IE:\Keil_v5\ARM\CMSIS\Include 
+--predefine="__UVISION_VERSION SETA 518" --predefine="STM32L071xx SETA 1" --lis
+t=.\listings\startup_stm32l071xx.lst ..\CORE\startup_stm32l071xx.s
 
 
 

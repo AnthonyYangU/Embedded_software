@@ -28,8 +28,8 @@ typedef struct
 		double deepth;
     double force1[ARR_LEN];
 	  double force2[ARR_LEN];
-		double pressure1[ARR_LEN];
-	  double pressure2[ARR_LEN];
+		double stress1[ARR_LEN];
+	  double stress2[ARR_LEN];
 	  double current[ARR_LEN];
 }testValue_t;
 

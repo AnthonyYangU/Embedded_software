@@ -6,12 +6,14 @@
 #include "timer.h"
 #include "spi_sdcard.h"
 #include "spi.h"
-
 //usmartÖ§³Ö²¿·
 //½«ÊÕµ½µÄATÖ¸ÁîÓ¦´ğÊı¾İ·µ»Ø¸øµçÄÔ´®¿Ú
 //mode:0,²»ÇåÁãUSART1_RX_STA;
 //     1,ÇåÁãUSART1_RX_STA;
 static testValue_t testValue[5]={0};
+//void flush(void){
+//	memset(testValue,0,5320);
+//}
 void sim_at_response(u8 mode)
 {
 	if(USART1_RX_STA&0X8000)		//½ÓÊÕµ½Ò»´ÎÊı¾İÁË
@@ -73,8 +75,6 @@ u8 sim800c_send_cmd(u8 *cmd,u8 *ack,u16 waittime)
 	return res;
 }
 
-
-
 ///////////////////////////////////////////////////////////////////////////////////////
 //GPRS²âÊÔ²¿·Ö´úÂë
 
@@ -85,62 +85,47 @@ const u8 *modetbl[2]={"TCP","UDP"};//Á¬½ÓÄ£Ê½
 //ipaddr:ipµØÖ·
 //port:¶Ë¿Ú 
 
-//typedef struct
-//{
-//		double battery;
-//    double temperature;
-//		double deepth;
-//    double force1[ARR_LEN];
-//	  double force2[ARR_LEN];
-//		double pressure1[ARR_LEN];
-//	  double pressure2[ARR_LEN];
-//	  double current[ARR_LEN];
-//}testValue_t;
-
 u8 sim800c_tcpudp_test(void)
 { 
 	//u8 sendsta=0;
-	u16 i,j,ite;
+	u16 i,j,ite=0,errorTime;
+	static u8 repeatTime;
 	USART1_RX_STA=0;
 	printf("Begin initiation\r\n");
-	
-	for(i=0;i<5;i++){
-		for(j=0;j<ARR_LEN;j++){
-			testValue[i].force1[j] = 10.5*i + 3.0*j;
-			testValue[i].force2[j] = 6.32 + i*j;
-			testValue[i].pressure1[j] = i + 3*j;
-			testValue[i].pressure2[j] = 3*i + 5*j;
-			testValue[i].current[j] = 4*i + 1.2*j;
-		}
-		testValue[i].battery = 0.23*i;
-		testValue[i].temperature = 23 + 0.5*i;
-		testValue[i].deepth = 10.12 + 0.4*i;
-	}
 
-	printf("%d",sizeof(testValue[0]));
+	printf("The size of testValue is %d \r\n",sizeof(testValue));
 	if(sim800c_send_cmd("AT+CIPSTART=\"TCP\",\"39.108.179.129\",\"9000\"","OK",500))return 1;		//·¢ÆğÁ¬½Ó
 	while(1)
 	{ 
-			if(sim800c_send_cmd("AT+CIPSEND",">",500)==0){
+			if(sim800c_send_cmd("AT+CIPSEND",">",1000)==0){
 				send_multi_data(&testValue[ite],sizeof(testValue[ite]));
 				if(sim800c_send_cmd((u8*)0X1A,"SEND OK",1000)==0)
 				{
-					ite++;
+					ite=ite+1;
 					if(ite>=5){
-						sim800c_send_cmd("AT+CIPCLOSE=1","CLOSE OK",500);	//¹Ø±ÕÁ¬½Ó
-						sim800c_send_cmd("AT+CIPSHUT","SHUT OK",500);
+						sim800c_send_cmd("AT+CIPCLOSE=1","CLOSE OK",500);	//¹Ø±ÕÁ¬½Ó						
+						sim800c_send_cmd("AT+CIPSHUT","SHUT OK",500);//¹Ø±Õ³¡¾°
+						printf("ite number: %d \r\n",ite);
 						return 0;
 					}
+					printf("Ite is %d\r\n",ite);
+				}else{
+					sim800c_send_cmd((u8*)0X1B,0,0);
+					errorTime++;
+					printf("error\r\n");
 				}
 				delay_ms(10);
-			}else sim800c_send_cmd((u8*)0X1B,0,0);
-				
-//			if(sendsta>5){
-//				sim800c_send_cmd("AT+CIPCLOSE=1","CLOSE OK",500);	//¹Ø±ÕÁ¬½Ó
-//				sim800c_send_cmd("AT+CIPSHUT","SHUT OK",500);		//¹Ø±ÕÒÆ¶¯³¡¾° 
-//				if(sim800c_send_cmd("AT+CIPSTART=\"TCP\",\"39.108.179.129\",\"9000\"","OK",500))return ite+2;			//³¢ÊÔÖØĞÂÁ¬½Ó				
-//				sendsta = 0;
-//			}	
+			}else{
+				sim800c_send_cmd((u8*)0X1B,0,0);
+				errorTime++;
+				printf("Send error\r\n");
+			}
+			if(errorTime>3){
+				sim800c_send_cmd("AT+CIPCLOSE=1","CLOSE OK",500);	//¹Ø±ÕÁ¬½Ó
+				sim800c_send_cmd("AT+CIPSHUT","SHUT OK",500);				
+			  printf("Fatal error\r\n");
+				return ++repeatTime;
+			}
 	} 
 }
 
@@ -155,21 +140,24 @@ u8 sim800c_gprs_test(void)
 	//if(sim800c_send_cmd("AT+CGDCONT=1,\"IP\",\"CMNET\"","OK",500))return 6;
 	if(sim800c_send_cmd("AT+CGCLASS=\"B\"","OK",1000))return 1;				//ÉèÖÃGPRSÒÆ¶¯Ì¨Àà±ğÎªB,Ö§³Ö°ü½»»»ºÍÊı¾İ½»»» 
 	//if(sim800c_send_cmd("AT+CGMSCLASS=10","OK",1000))return 1;
-	//if(sim800c_send_cmd("AT+CGDCONT=1,\"IP\",\"CMNET\"","OK",1000))return 2;//ÉèÖÃPDPÉÏÏÂÎÄ,»¥ÁªÍø½ÓĞ­Òé,½ÓÈëµãµÈĞÅÏ¢
+	if(sim800c_send_cmd("AT+CGDCONT=1,\"IP\",\"CMNET\"","OK",1000))return 2;//ÉèÖÃPDPÉÏÏÂÎÄ,»¥ÁªÍø½ÓĞ­Òé,½ÓÈëµãµÈĞÅÏ¢
 	if(sim800c_send_cmd("AT+CGATT=1","OK",500))return 3;					//¸½×ÅGPRSÒµÎñ
 	//if(sim800c_send_cmd("AT+CIPMODE=1","OK",500))return 3;					//¸½×ÅGPRSÒµÎñ
-	if(sim800c_send_cmd("AT+CIPCSGP=1,\"CMNET\"","OK",500))return 4;	 	//ÉèÖÃÎªGPRSÁ¬½ÓÄ£Ê½
+	if(sim800c_send_cmd("AT+CIPCSGP=1,\"CMNET\"","OK",500));//return 4;	 	//ÉèÖÃÎªGPRSÁ¬½ÓÄ£Ê½
 	if(sim800c_send_cmd("AT+CLPORT=\"TCP\",\"2000\"","OK",500))return 5;
 	//if(sim800c_send_cmd("AT+CIPHEAD=1","OK",500))printf("head fail\r\n");//return 5;	 				//ÉèÖÃ½ÓÊÕÊı¾İÏÔÊ¾IPÍ·(·½±ãÅĞ¶ÏÊı¾İÀ´Ô´); 	
 	printf("success\r\n");
 	while(1)
 	{	
 		state = sim800c_tcpudp_test();
-		printf("pass");
+		printf("The state is %d",state);
 		USART1_RX_STA=0;
-		sim_at_response(1);//¼ì²éGSMÄ£¿é·¢ËÍ¹ıÀ´µÄÊı¾İ,¼°Ê±ÉÏ´«¸øµçÄÔ
+		//sim_at_response(1);//¼ì²éGSMÄ£¿é·¢ËÍ¹ıÀ´µÄÊı¾İ,¼°Ê±ÉÏ´«¸øµçÄÔ
 		if(state==0){
 			return 0;
+		}
+		if(state>=2){
+			return 2;
 		}
 	}
 } 
@@ -188,8 +176,81 @@ u8 sim800c_test(void)
 	while(1)
 	{
 		state = sim800c_gprs_test();//GPRS²âÊÔ
-		if(state==0){
-			return 0;
-		}
+		if(state==0)return 0;
 	} 	
 }
+//typedef struct
+//{
+//		double battery;
+//    double temperature;
+//		double deepth;
+//    double force1[ARR_LEN];
+//	  double force2[ARR_LEN];
+//		double pressure1[ARR_LEN];
+//	  double pressure2[ARR_LEN];
+//	  double current[ARR_LEN];
+//}testValue_t;
+u8 dataConstruct(DATATYPE datatype,double* data)
+{
+	u8 i,j;
+	if(datatype==BATTERY){
+		for(i=0;i<5;i++){
+			testValue[i].battery=data[i];
+		}
+		return 0;
+	}
+	if(datatype==TEMPERATURE){
+		for(i=0;i<5;i++){
+			testValue[i].temperature=data[i];
+		}
+		return 0;
+	}
+	if(datatype==DEEPTH){
+		for(i=0;i<5;i++){
+			testValue[i].deepth=data[i];
+		}
+		return 0;		
+	}
+	if(datatype==FORCE1){
+		for(i=0;i<5;i++){
+			for(j=0;j<ARR_LEN;j++){
+				testValue[i].force1[j] = data[26*i+j];
+			}
+		}
+		return 0;		
+	}
+	if(datatype==FORCE2){
+		for(i=0;i<5;i++){
+			for(j=0;j<ARR_LEN;j++){
+				testValue[i].force2[j] = data[26*i+j];
+			}
+		}	
+		return 0;
+	}
+	if(datatype==STRESS1){
+		for(i=0;i<5;i++){
+			for(j=0;j<ARR_LEN;j++){
+				testValue[i].stress1[j] = data[26*i+j];
+			}
+		}
+		return 0;
+	}
+	if(datatype==STRESS2){
+		for(i=0;i<5;i++){
+			for(j=0;j<ARR_LEN;j++){
+				testValue[i].stress2[j] = data[26*i+j];
+			}
+		}	
+		return 0;
+	}	
+	if(datatype==CURRENT){
+		for(i=0;i<5;i++){
+			for(j=0;j<ARR_LEN;j++){
+				testValue[i].current[j] = data[26*i+j];
+			}
+		}
+		return 0;		
+	}		
+	return 1;
+}
+

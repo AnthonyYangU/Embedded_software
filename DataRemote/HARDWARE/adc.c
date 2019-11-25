@@ -41,7 +41,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_GPIOC_CLK_ENABLE();			//开启GPIOC时钟
 		__HAL_RCC_GPIOA_CLK_ENABLE();	
 	  __HAL_RCC_GPIOB_CLK_ENABLE();
-    GPIO_Initure.Pin=GPIO_PIN_1|GPIO_PIN_2;//PC1
+	
+    GPIO_Initure.Pin=GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3;//PC1
     GPIO_Initure.Mode=GPIO_MODE_ANALOG;     //模拟
     GPIO_Initure.Pull=GPIO_NOPULL;          //不带上下拉
     HAL_GPIO_Init(GPIOC,&GPIO_Initure);

@@ -30,23 +30,26 @@ const u8 TEXT_Buffer[]={"STM32L071 IIC TEST SUCCEED~~~YEAH"};
 	
 extern char  RxBuffer[100];
 */
-void printArr(double arr[],u8 len){
-	u8 ite;
-	for(ite=0;ite<len;ite++){
-		printf("Arr[%d] data is %f. \r\n",ite,arr[ite]);
-	}
-}
-
+//void printArr(double arr[],u8 len){
+//	u8 ite;
+//	for(ite=0;ite<len;ite++){
+//		printf("Arr[%d] data is %f. \r\n",ite,arr[ite]);
+//	}
+//}
+static double force1[130] = {0};
+static double finalData[130]={0};
 
 int main(void)
 {
-	//double adcx=0;
-	//double val[20],dep[20];
-	//double iteration,col,remind,finalData;
-	
+	double dep[5]={0};
+	double adcx=0;
+	double col=0,remind=0;
+
 	//u8 receive_data[32]; 
-//	u8 send_data[32];
-//	u8 i,j,ite;
+	//u8 send_data[32];
+	u8 i,j,ite;
+	u16 iteration=0,count=0;
+	
 	//************系统初始化
 
 	HAL_Init();
@@ -71,15 +74,17 @@ int main(void)
 	//唤醒管脚PA0(WAKEUP1)
 	WKUP_Init();
 	delay_ms(5);
-  if(Check_WKUP()== 0)Sys_Enter_Standby();	
+  if(Check_WKUP()== 0)Sys_Enter_Standby();
 	
+
+
 	
 	//***********************电源管理控制测试
-//	PWRA_Init();
-//	PWRB_Init();
-//	PWRC_Init(); 
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);//电流采集/水深传感器传感器/E2PROM/I2C/先电流13s
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);//深度传感器,PB1,PB0
+	PWRA_Init();
+	PWRB_Init();
+	PWRC_Init(); 
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);//电流采集/水深传感器传感器/E2PROM/I2C/先电流13s
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);//深度传感器,PB1,PB0
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);//板载温度/陀螺仪
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);//拉压力传感器电桥供电,sd卡供电
 	//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);//Sim800c
@@ -91,33 +96,63 @@ int main(void)
 	//PA1(拉压力传感器(电桥)),传输通道为ADC_CHANNEL_1
 	//PA3(电池电压),传输通道为ADC_CHANNEL_3
 	//PB1，备用ADC口,传输通道为通道9
-	//MY_ADC_Init();
-	
+	//PC3(拉压力传感器(放大倍数510),传输通道为ADC-CHANNEL_13
+	MY_ADC_Init();
+	delay_ms(100);
 	//*********************唤醒电流测量
-//		for(iteration=0;iteration<200;iteration++){
-//			col = Get_Adc(ADC_CHANNEL_12);
-//			remind = (remind>col)?remind:col;
-//		}
-//		finalData = remind*3.3/4096;
-//		printf("The vol is:%f",finalData);
-//		
-//		remind = 0;
+	for(count=0;count<130;count++){
+			for(iteration=0;iteration<100;iteration++){
+				col = Get_Adc_Average(ADC_CHANNEL_12,5);
+				remind = (remind>col)?remind:col;
+			}
+			finalData[count] = (remind*3.3/4096)*5.0/2.8*0.7;
+			remind =0;
+	}
+//	for(count=0;count<130;count++){
+//		printf("Val data is %f. \r\n",finalData[count]);
+//		delay_ms(10);
+//	}
+		dataConstruct(CURRENT,finalData);
+		printf("Finish current\r\n");
+	//********************拉压力传感器电桥供电
+	for(count=0;count<130;count++){
+		adcx=Get_Adc_Average(ADC_CHANNEL_1,5);//获取通道12的转换值，20次取平均
+		//force1[count] = (3.3*adcx/4096-2)/1.02*9.8;
+		force1[count] = (3.3*adcx/4096*2-2)/1.02*5;
+	}
+	//单位是N
+	
+	dataConstruct(FORCE1,force1);	
+	printf("Finish force1\r\n");
+	
 	//********************水深传感器测试
-//	for(i=0;i<20;i++){
-//		adcx=Get_Adc_Average(ADC_CHANNEL_11,10);//获取通道12的转换值，20次取平均
+	
+	for(count=0;count<5;count++){
+		adcx=Get_Adc_Average(ADC_CHANNEL_11,20);//获取通道12的转换值，20次取平均
 //	  val[i] = 3.3*adcx/4096;
-//		dep[i] = (val[i]-0.5)/0.05+1.0;
-//		delay_ms(5);
-//	}
-//	for(ite=0;ite<20;ite++){
-//		printf("Val[%d] data is %f. \r\n",ite,val[ite]);
-//		delay_ms(10);
-//	}
-
-//	for(ite=0;ite<20;ite++){
-//		printf("Dep[%d] data is %f. \r\n",ite,dep[ite]);
-//		delay_ms(10);
-//	}
+		dep[count] = (3.3*adcx/4096-0.5)/0.005;
+	}
+	for(count=0;count<5;count++){
+		printf("Deepth data is %f \r\n",dep[count]);
+		delay_ms(10);
+	}
+		
+	dataConstruct(DEEPTH,dep);
+	printf("Finish deepth\r\n");
+//	
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);//Sim800c开启
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+//	
+//	
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_2, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_RESET);
+	sim800c_test();
+	LED_Control(LED_OFF);
+	delay_ms(1000);
+	Sys_Enter_Standby();	
+  
+	
 //	delay_ms(12000);
 //	if(Check_WKUP()== 0)Sys_Enter_Standby();	
 	
@@ -244,29 +279,12 @@ int main(void)
 //			remind = (remind>col)?remind:col;
 //		}
 //		finalData = remind*3.3/4096;
-//		printf("The vol is:%f  \n",finalData);
+//		printf("The vol is:%f \r\n",finalData);
+//		delay_ms(200);
 //		remind = 0;		
 		
 		//************** Sim800c测试
 		//printf("Test start\r\n");
-
-		
-		
-//			for(i=0;i<20;i++){
-//		adcx=Get_Adc_Average(ADC_CHANNEL_9,10);//获取通道12的转换值，20次取平均
-//	  val[i] = 3.3*adcx/4096;
-//		//dep[i] = (val[i]-0.5)/0.05;
-//		delay_ms(5);
-//	}
-//	for(ite=0;ite<20;ite++){
-//		printf("Val[%d] data is %f. \r\n",ite,val[ite]);
-//		delay_ms(10);
-//	}
-
-//	for(ite=0;ite<20;ite++){
-//		printf("Dep[%d] data is %f. \r\n",ite,dep[ite]);
-//		delay_ms(10);
-//	}
 	}
 		//delay_ms(100);
 		/*
